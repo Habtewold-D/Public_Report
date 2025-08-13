@@ -6,14 +6,26 @@ import MapComponent from "@/components/MapComponent";
 import { Calendar, MapPin, ImageIcon } from "lucide-react";
 
 const IssueDetails = () => {
+  type IssueStatus = "open" | "progress" | "resolved";
   // Mock issue detail for UI
-  const issue = {
+  const issue: {
+    id: string;
+    title: string;
+    description: string;
+    sector: string;
+    status: IssueStatus;
+    lat: number;
+    lng: number;
+    createdAt: string;
+    images: string[];
+    timeline: { label: string; date: string }[];
+  } = {
     id: "1",
     title: "Broken Street Light",
     description:
       "Street light has been out for over a week, making the area unsafe at night. Please repair the pole and replace the bulb.",
     sector: "Street Lighting",
-    status: "open" as const,
+    status: "open",
     lat: 9.0192,
     lng: 38.7525,
     createdAt: "2024-01-15",

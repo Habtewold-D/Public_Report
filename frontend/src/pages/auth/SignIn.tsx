@@ -5,25 +5,40 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
+    role: "citizen" as "citizen" | "sector" | "admin",
   });
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { setRole } = useAuth();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // TODO: Add your backend authentication logic here
+    // Demo: role-based redirect (replace with real auth)
+    const { role } = formData;
+    // Persist role for role-based navigation
+    setRole(role);
+    const target = role === "admin"
+      ? "/admin/dashboard"
+      : role === "sector"
+        ? "/sector/dashboard"
+        : "/user/dashboard";
+
     toast({
-      title: "Sign In Attempted",
-      description: "Backend authentication logic to be implemented.",
+      title: "Signed in",
+      description: `Redirecting to ${target}...`,
     });
-    
-    console.log("Sign in data:", formData);
+
+    navigate(target, { replace: true });
   };
 
   return (
@@ -85,6 +100,23 @@ const SignIn = () => {
                     )}
                   </Button>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(v) => setFormData(prev => ({ ...prev, role: v as typeof prev.role }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="citizen">Citizen</SelectItem>
+                    <SelectItem value="sector">Sector Manager</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center justify-between text-sm">

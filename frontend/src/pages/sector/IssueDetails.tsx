@@ -7,12 +7,23 @@ import { Calendar, MapPin, CheckCircle2, Loader2, MessageSquare } from "lucide-r
 import { Textarea } from "@/components/ui/textarea";
 
 const SectorIssueDetails = () => {
-  const issue = {
+  type IssueStatus = "open" | "progress" | "resolved";
+  const issue: {
+    id: string;
+    title: string;
+    description: string;
+    sector: string;
+    status: IssueStatus;
+    lat: number;
+    lng: number;
+    createdAt: string;
+    images: string[];
+  } = {
     id: "1",
     title: "Broken Street Light",
     description: "Street light out near intersection.",
     sector: "Street Lighting",
-    status: "open" as const,
+    status: "open",
     lat: 9.0192,
     lng: 38.7525,
     createdAt: "2024-01-15",
