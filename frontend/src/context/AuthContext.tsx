@@ -26,33 +26,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthContextValue["user"]>(null);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(false);
 
-  // Axios defaults for Sanctum session auth
-  // Use localhost to match Vite dev server origin and avoid cross-site cookie issues
-  axios.defaults.baseURL = "http://localhost:8000";
-  axios.defaults.withCredentials = true; // send/receive cookies
-  axios.defaults.xsrfCookieName = "XSRF-TOKEN";
-  axios.defaults.xsrfHeaderName = "X-XSRF-TOKEN";
-  axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
+  // Axios defaults for token-based API auth
+  const API_BASE = "http://127.0.0.1:8000/api";
+  axios.defaults.baseURL = API_BASE;
 
   useEffect(() => {
-    const saved = localStorage.getItem("civic_role");
-    if (saved === "citizen" || saved === "sector" || saved === "admin") {
-      setRoleState(saved);
+    const savedRole = localStorage.getItem("civic_role");
+    if (savedRole === "citizen" || savedRole === "sector" || savedRole === "admin") {
+      setRoleState(savedRole);
     }
-    // Try to hydrate current user from session
-    (async () => {
-      try {
-        const res = await axios.get("/user");
-        if (res.data && res.data.user) {
-          const u = res.data.user as NonNullable<AuthContextValue["user"]>;
-          setUser(u);
-          setRoleState(u.role);
-          localStorage.setItem("civic_role", u.role);
+    const savedToken = localStorage.getItem("civic_token");
+    if (savedToken) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
+      // Hydrate current user using token
+      (async () => {
+        try {
+          const res = await axios.get("/user");
+          if (res.data && res.data.user) {
+            const u = res.data.user as NonNullable<AuthContextValue["user"]>;
+            setUser(u);
+            setRoleState(u.role);
+            localStorage.setItem("civic_role", u.role);
+          }
+        } catch (_) {
+          // token invalid; clear
+          localStorage.removeItem("civic_token");
+          delete axios.defaults.headers.common["Authorization"];
         }
-      } catch (_) {
-        // ignore if not logged in
-      }
-    })();
+      })();
+    }
   }, []);
 
   const persistRole = (r: Exclude<Role, null>) => {
@@ -64,21 +66,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setRoleState(null);
     setUser(null);
     localStorage.removeItem("civic_role");
-  };
-
-  const getCsrf = async () => {
-    await axios.get("/sanctum/csrf-cookie");
+    localStorage.removeItem("civic_token");
+    delete axios.defaults.headers.common["Authorization"];
   };
 
   const login: AuthContextValue["login"] = async ({ email, password }) => {
     setIsAuthLoading(true);
     try {
-      await getCsrf();
       const res = await axios.post("/login", { email, password });
       const u = res.data?.user as NonNullable<AuthContextValue["user"]>;
-      if (u) {
+      const token = res.data?.token as string | undefined;
+      if (u && token) {
         setUser(u);
         persistRole(u.role);
+        localStorage.setItem("civic_token", token);
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
         return { role: u.role };
       }
       throw new Error("Invalid login response");
@@ -90,7 +92,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const register: AuthContextValue["register"] = async ({ firstName, lastName, email, password }) => {
     setIsAuthLoading(true);
     try {
-      await getCsrf();
       const res = await axios.post("/register", {
         first_name: firstName,
         last_name: lastName,
@@ -98,9 +99,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password,
       });
       const u = res.data?.user as NonNullable<AuthContextValue["user"]>;
-      if (u) {
+      const token = res.data?.token as string | undefined;
+      if (u && token) {
         setUser(u);
         persistRole(u.role);
+        localStorage.setItem("civic_token", token);
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
         return { role: u.role };
       }
       throw new Error("Invalid register response");
@@ -112,7 +116,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout: AuthContextValue["logout"] = async () => {
     setIsAuthLoading(true);
     try {
-      await getCsrf();
       await axios.post("/logout");
     } finally {
       clearAuth();
