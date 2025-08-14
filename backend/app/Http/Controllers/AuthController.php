@@ -28,10 +28,12 @@ class AuthController extends Controller
             'role' => 'citizen',
         ]);
 
-        Auth::login($user);
+        // Issue personal access token
+        $token = $user->createToken('api')->plainTextToken;
 
         return response()->json([
             'message' => 'Registered',
+            'token' => $token,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -50,16 +52,17 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($credentials, true)) {
+        if (! Auth::attempt($credentials)) {
             return response()->json(['message' => 'Invalid credentials'], 422);
         }
 
-        $request->session()->regenerate();
-
+        /** @var User $user */
         $user = $request->user();
+        $token = $user->createToken('api')->plainTextToken;
 
         return response()->json([
             'message' => 'Logged in',
+            'token' => $token,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -88,10 +91,10 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
+        // Revoke current access token if present
+        if ($request->user() && $request->user()->currentAccessToken()) {
+            $request->user()->currentAccessToken()->delete();
+        }
         return response()->json(['message' => 'Logged out']);
     }
 }

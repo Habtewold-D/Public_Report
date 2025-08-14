@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { MapPin, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -15,19 +16,23 @@ const SignIn = () => {
   });
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login, isAuthLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // TODO: Replace with real backend login and user role fetch
-    const target = "/user/dashboard";
-
-    toast({
-      title: "Signed in",
-      description: `Redirecting to ${target}...`,
-    });
-
-    navigate(target, { replace: true });
+    if (isSubmitting || isAuthLoading) return;
+    setIsSubmitting(true);
+    try {
+      const { role } = await login({ email: formData.email, password: formData.password });
+      const target = role === "admin" ? "/admin/dashboard" : role === "sector" ? "/sector/dashboard" : "/user/dashboard";
+      toast({ title: "Signed in", description: `Redirecting to ${target}...` });
+      navigate(target, { replace: true });
+    } catch (err: any) {
+      toast({ title: "Sign in failed", description: err?.response?.data?.message || err?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -101,7 +106,7 @@ const SignIn = () => {
                 </a>
               </div>
 
-              <Button type="submit" variant="hero" className="w-full" size="lg">
+              <Button type="submit" variant="hero" className="w-full" size="lg" disabled={isSubmitting || isAuthLoading}>
                 Sign In
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>

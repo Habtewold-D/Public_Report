@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { role, clearRole } = useAuth();
+  const { role, logout, isAuthLoading } = useAuth();
 
   return (
     <header className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
@@ -74,7 +74,12 @@ const Header = () => {
               </>
             ) : (
               <>
-                <Button variant="outline" size="sm" onClick={() => { clearRole(); window.location.href = "/"; }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isAuthLoading}
+                  onClick={async () => { await logout(); window.location.href = "/"; }}
+                >
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
                 </Button>
@@ -144,7 +149,13 @@ const Header = () => {
                     </a>
                   </>
                 ) : (
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => { clearRole(); window.location.href = "/"; }}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={isAuthLoading}
+                    onClick={async () => { await logout(); window.location.href = "/"; }}
+                  >
                     <LogOut className="w-4 h-4 mr-2" />
                     Sign Out
                   </Button>

@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Eye, EyeOff, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -17,10 +19,14 @@ const SignUp = () => {
     confirmPassword: ""
   });
   const { toast } = useToast();
+  const { register, isAuthLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (isSubmitting || isAuthLoading) return;
+
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Password Mismatch",
@@ -30,13 +36,22 @@ const SignUp = () => {
       return;
     }
 
-    // TODO: Add your backend registration logic here
-    toast({
-      title: "Account Created Successfully!",
-      description: "Backend registration logic to be implemented.",
-    });
-    
-    console.log("Sign up data:", formData);
+    setIsSubmitting(true);
+    try {
+      const { role } = await register({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+      });
+      const target = role === "admin" ? "/admin/dashboard" : role === "sector" ? "/sector/dashboard" : "/user/dashboard";
+      toast({ title: "Account created", description: `Redirecting to ${target}...` });
+      navigate(target, { replace: true });
+    } catch (err: any) {
+      toast({ title: "Sign up failed", description: err?.response?.data?.message || err?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -169,7 +184,7 @@ const SignUp = () => {
                 </label>
               </div>
 
-              <Button type="submit" variant="hero" className="w-full" size="lg">
+              <Button type="submit" variant="hero" className="w-full" size="lg" disabled={isSubmitting || isAuthLoading}>
                 <UserPlus className="w-4 h-4 mr-2" />
                 Create Account
               </Button>

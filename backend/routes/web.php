@@ -1,14 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Web routes (kept minimal). API routes are in routes/api.php
+// You can add a health or landing route here if needed.
 
-// Sanctum SPA auth routes
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::get('/user', [AuthController::class, 'user']);
-Route::post('/logout', [AuthController::class, 'logout']);
+// Example:
+// Route::get('/', function () {
+//     return 'OK';
+// });
