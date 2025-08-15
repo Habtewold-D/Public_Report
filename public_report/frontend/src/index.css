@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Civic Platform Design System - Professional, Trustworthy, Accessible */
+
+@layer base {
+  :root {
+    /* Civic Color Palette */
+    --background: 0 0% 100%;
+    --foreground: 213 24% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 213 24% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 213 24% 12%;
+
+    /* Primary: Civic Authority Blue */
+    --primary: 213 94% 68%;
+    --primary-deep: 213 94% 40%;
+    --primary-foreground: 0 0% 100%;
+    --primary-muted: 213 94% 95%;
+
+    /* Secondary: Success/Resolution Green */
+    --secondary: 142 76% 36%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-muted: 142 76% 95%;
+
+    /* Accent: Urgent/Action Orange */
+    --accent: 24 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    --accent-muted: 24 95% 95%;
+
+    /* Status Colors */
+    --status-open: 45 93% 47%;
+    --status-progress: 213 94% 68%;
+    --status-resolved: 142 76% 36%;
+
+    --muted: 213 13% 96%;
+    --muted-foreground: 213 13% 45%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 213 13% 91%;
+    --input: 213 13% 96%;
+    --ring: 213 94% 68%;
+
+    --radius: 0.75rem;
+
+    /* Civic Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary-deep)), hsl(var(--primary)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary-deep)) 0%, hsl(var(--accent)) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(var(--secondary)), hsl(142 76% 55%));
+    
+    /* Shadows with civic authority */
+    --shadow-civic: 0 4px 20px -2px hsl(var(--primary) / 0.1);
+    --shadow-card: 0 2px 8px -1px hsl(213 13% 45% / 0.1);
+    
+    /* Animation timings */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-quick: all 0.15s ease-out;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 213 24% 6%;
+    --foreground: 213 13% 96%;
+
+    --card: 213 24% 8%;
+    --card-foreground: 213 13% 96%;
+
+    --popover: 213 24% 8%;
+    --popover-foreground: 213 13% 96%;
+
+    --primary: 213 94% 68%;
+    --primary-deep: 213 94% 55%;
+    --primary-foreground: 213 24% 6%;
+    --primary-muted: 213 94% 15%;
+
+    --secondary: 142 76% 45%;
+    --secondary-foreground: 213 24% 6%;
+    --secondary-muted: 142 76% 15%;
+
+    --accent: 24 95% 60%;
+    --accent-foreground: 213 24% 6%;
+    --accent-muted: 24 95% 15%;
+
+    --status-open: 45 93% 55%;
+    --status-progress: 213 94% 68%;
+    --status-resolved: 142 76% 45%;
+
+    --muted: 213 24% 12%;
+    --muted-foreground: 213 13% 65%;
+
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 213 24% 6%;
+
+    --border: 213 24% 18%;
+    --input: 213 24% 12%;
+    --ring: 213 94% 68%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
