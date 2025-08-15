@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SectorController;
+use App\Http\Controllers\UserAdminController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -18,4 +19,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/sectors', [SectorController::class, 'store']);
     Route::put('/sectors/{sector}', [SectorController::class, 'update']);
     Route::delete('/sectors/{sector}', [SectorController::class, 'destroy']);
+
+    // Users management (admin only, enforced in controller)
+    Route::get('/users', [UserAdminController::class, 'index']);
+    Route::put('/users/{user}', [UserAdminController::class, 'update']);
 });
