@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Clock, AlertTriangle, CheckCircle, Search, Filter, MessageSquare, Calendar, User } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 interface SectorIssue {
   id: string;
@@ -28,13 +29,10 @@ const SectorDashboard = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
 
-  // Mock sector manager data - replace with actual data from your backend
-  const sectorManager = {
-    name: "Sarah Johnson",
-    sector: "Street Lighting",
-    email: "sarah.johnson@city.gov",
-    territories: ["Downtown", "East District", "West District"]
-  };
+  // Authenticated sector user
+  const { user } = useAuth();
+  const displayName = user?.name || user?.first_name || "Sector";
+  const territories = ["Downtown", "East District", "West District"]; // static for now
 
   // Mock sector issues - replace with actual data from your backend
   const sectorIssues: SectorIssue[] = [
@@ -142,10 +140,10 @@ const SectorDashboard = () => {
           {/* Welcome Header */}
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-foreground mb-2">
-              {sectorManager.sector} Dashboard
+              {displayName}'s Dashboard
             </h1>
             <p className="text-lg text-muted-foreground">
-              Welcome, {sectorManager.name} • Manage your sector's issues and respond to citizens
+              Welcome, {displayName} • Manage your sector's issues and respond to citizens
             </p>
           </div>
 
@@ -240,7 +238,7 @@ const SectorDashboard = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Territories</SelectItem>
-                      {sectorManager.territories.map((territory) => (
+                      {territories.map((territory) => (
                         <SelectItem key={territory} value={territory.toLowerCase()}>
                           {territory}
                         </SelectItem>

@@ -34,10 +34,10 @@ const Header = () => {
             {role === "citizen" && (
               <>
                 <a href="/user/dashboard" className="text-foreground hover:text-primary transition-colors">Dashboard</a>
+                <a href="/report" className="text-foreground hover:text-primary transition-colors">Report Issue</a>
                 <a href="/user/my-issues" className="text-foreground hover:text-primary transition-colors">My Issues</a>
                 <a href="/user/notifications" className="text-foreground hover:text-primary transition-colors">Notifications</a>
                 <a href="/user/account" className="text-foreground hover:text-primary transition-colors">Account</a>
-                <a href="/report" className="text-foreground hover:text-primary transition-colors">Report Issue</a>
               </>
             )}
             {role === "sector" && (
@@ -112,10 +112,10 @@ const Header = () => {
               {role === "citizen" && (
                 <>
                   <a href="/user/dashboard" className="text-foreground hover:text-primary transition-colors py-2">Dashboard</a>
+                  <a href="/report" className="text-foreground hover:text-primary transition-colors py-2">Report Issue</a>
                   <a href="/user/my-issues" className="text-foreground hover:text-primary transition-colors py-2">My Issues</a>
                   <a href="/user/notifications" className="text-foreground hover:text-primary transition-colors py-2">Notifications</a>
                   <a href="/user/account" className="text-foreground hover:text-primary transition-colors py-2">Account</a>
-                  <a href="/report" className="text-foreground hover:text-primary transition-colors py-2">Report Issue</a>
                 </>
               )}
               {role === "sector" && (

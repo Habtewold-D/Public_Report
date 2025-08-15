@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Plus, Clock, CheckCircle, AlertCircle, Calendar, Eye, MessageSquare } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 interface UserIssue {
   id: string;
@@ -20,15 +21,16 @@ interface UserIssue {
 
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const { user: authUser } = useAuth();
 
-  // Mock user data - replace with actual user data from your backend
+  // Mock user data for non-essential fields; prefer authenticated user for identity fields
   const user = {
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
+    firstName: authUser?.first_name || authUser?.name?.split(" ")[0] || "User",
+    lastName: authUser?.last_name || (authUser?.name ? authUser.name.split(" ").slice(1).join(" ") : ""),
+    email: authUser?.email || "john.doe@example.com",
     joinedDate: "2024-01-15",
     weeklyLimit: 5,
-    weeklySubmitted: 2
+    weeklySubmitted: 2,
   };
 
   // Mock user issues - replace with actual data from your backend
