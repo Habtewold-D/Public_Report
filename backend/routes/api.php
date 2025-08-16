@@ -29,4 +29,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/issues', [IssueController::class, 'index']);
     Route::get('/issues/{issue}', [IssueController::class, 'show']);
     Route::post('/issues', [IssueController::class, 'store']);
+    Route::patch('/issues/{issue}/status', [IssueController::class, 'updateStatus']);
 });

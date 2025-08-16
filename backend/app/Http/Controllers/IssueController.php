@@ -85,7 +85,7 @@ class IssueController extends Controller
             'description' => $validated['description'],
             'latitude' => $validated['latitude'],
             'longitude' => $validated['longitude'],
-            'status' => 'open',
+            'status' => 'submitted',
         ]);
 
         // Handle images if any
@@ -109,5 +109,42 @@ class IssueController extends Controller
         });
 
         return response()->json(['message' => 'Issue created', 'data' => $issue], 201);
+    }
+
+    public function updateStatus(Request $request, Issue $issue)
+    {
+        $user = Auth::user();
+
+        // Only sector assigned to the issue or admin can change status
+        if (!($user->role === 'admin' || ($user->role === 'sector' && $issue->sector_id === $user->id))) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(['submitted','inprogress','solved'])],
+        ]);
+
+        $current = $issue->status;
+        $next = $validated['status'];
+
+        // Enforce workflow: submitted -> inprogress -> solved
+        $allowed = [
+            'submitted' => ['inprogress'],
+            'inprogress' => ['solved'],
+            'solved' => [],
+        ];
+
+        if ($current === $next) {
+            return response()->json(['message' => 'No change', 'data' => $issue]);
+        }
+
+        if (!isset($allowed[$current]) || !in_array($next, $allowed[$current], true)) {
+            return response()->json(['message' => "Invalid status transition from {$current} to {$next}"], 422);
+        }
+
+        $issue->status = $next;
+        $issue->save();
+
+        return response()->json(['message' => 'Status updated', 'data' => $issue]);
     }
 }

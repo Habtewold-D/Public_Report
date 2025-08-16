@@ -3,36 +3,71 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import MapComponent from "@/components/MapComponent";
-import { Calendar, MapPin, CheckCircle2, Loader2, MessageSquare } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import { Calendar, MapPin, CheckCircle2, Loader2 } from "lucide-react";
+import React from "react";
+import axios from "axios";
+import { useParams } from "react-router-dom";
+
+type IssueStatus = "submitted" | "inprogress" | "solved";
+
+type Issue = {
+  id: number;
+  description: string;
+  sector: { id: number; name?: string; email: string } | null;
+  status: IssueStatus;
+  latitude: number;
+  longitude: number;
+  created_at: string;
+  images: { id: number; url: string }[];
+};
+
+const statusLabel = (s: IssueStatus) => (s === "submitted" ? "Submitted" : s === "inprogress" ? "In Progress" : "Solved");
+
+const statusBadgeClass = (s: IssueStatus) =>
+  s === "solved"
+    ? "bg-status-resolved text-secondary-foreground"
+    : s === "inprogress"
+    ? "bg-status-progress text-primary-foreground"
+    : "bg-muted text-foreground"; // submitted
 
 const SectorIssueDetails = () => {
-  type IssueStatus = "open" | "progress" | "resolved";
-  const issue: {
-    id: string;
-    title: string;
-    description: string;
-    sector: string;
-    status: IssueStatus;
-    lat: number;
-    lng: number;
-    createdAt: string;
-    images: string[];
-  } = {
-    id: "1",
-    title: "Broken Street Light",
-    description: "Street light out near intersection.",
-    sector: "Street Lighting",
-    status: "open",
-    lat: 9.0192,
-    lng: 38.7525,
-    createdAt: "2024-01-15",
-    images: [
-      "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800&auto=format&fit=crop&q=60",
-    ],
-  };
+  const { id } = useParams();
+  const [issue, setIssue] = React.useState<Issue | null>(null);
+  const [loading, setLoading] = React.useState<boolean>(false);
+  const [updating, setUpdating] = React.useState<boolean>(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const statusColor = issue.status === "resolved" ? "bg-status-resolved text-secondary-foreground" : issue.status === "progress" ? "bg-status-progress text-primary-foreground" : "bg-status-open text-accent-foreground";
+  const fetchIssue = React.useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get(`/issues/${id}`);
+      setIssue(res.data?.data as Issue);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || "Failed to load issue");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  React.useEffect(() => {
+    fetchIssue();
+  }, [fetchIssue]);
+
+  const transition = async (next: IssueStatus) => {
+    if (!id) return;
+    setUpdating(true);
+    setError(null);
+    try {
+      await axios.patch(`/issues/${id}/status`, { status: next });
+      await fetchIssue();
+    } catch (e: any) {
+      setError(e?.response?.data?.message || "Status update failed");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,39 +78,35 @@ const SectorIssueDetails = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-start justify-between">
-                  <span>{issue.title}</span>
-                  <Badge className={statusColor}>{issue.status === "open" ? "Open" : issue.status === "progress" ? "In Progress" : "Resolved"}</Badge>
+                  <span>Issue #{issue?.id}</span>
+                  {issue && <Badge className={statusBadgeClass(issue.status)}>{statusLabel(issue.status)}</Badge>}
                 </CardTitle>
-                <CardDescription>{issue.sector}</CardDescription>
+                <CardDescription>{issue?.sector?.name || issue?.sector?.email || "Assigned sector"}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <MapComponent
-                  center={[issue.lat, issue.lng]}
-                  markers={[{ id: issue.id, lat: issue.lat, lng: issue.lng, title: issue.title, status: issue.status }]}
-                  className="w-full h-72 rounded-lg"
-                />
-                <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
-                  <div className="flex items-center"><MapPin className="w-4 h-4 mr-2" />{issue.lat.toFixed(4)}, {issue.lng.toFixed(4)}</div>
-                  <div className="flex items-center"><Calendar className="w-4 h-4 mr-2" />{new Date(issue.createdAt).toLocaleDateString()}</div>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {issue.images.map((src, i) => (
-                    <img key={i} src={src} alt={`Issue photo ${i + 1}`} className="w-full h-36 object-cover rounded" />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Public Reply</CardTitle>
-                <CardDescription>Ask for more details or share progress updates visible to the citizen.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Textarea placeholder="Write a message to the reporter..." rows={3} />
-                <div className="flex gap-2">
-                  <Button variant="outline"><MessageSquare className="w-4 h-4 mr-2" /> Send Reply</Button>
-                </div>
+                {loading && <div className="text-sm text-muted-foreground">Loading...</div>}
+                {error && <div className="text-sm text-destructive">{error}</div>}
+                {issue && (
+                  <>
+                    <MapComponent
+                      center={[issue.latitude, issue.longitude]}
+                      markers={[
+                        { id: String(issue.id), lat: issue.latitude, lng: issue.longitude, title: `Issue ${issue.id}`, status: issue.status },
+                      ]}
+                      className="w-full h-72 rounded-lg"
+                    />
+                    <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
+                      <div className="flex items-center"><MapPin className="w-4 h-4 mr-2" />{issue.latitude.toFixed(4)}, {issue.longitude.toFixed(4)}</div>
+                      <div className="flex items-center"><Calendar className="w-4 h-4 mr-2" />{new Date(issue.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap">{issue.description}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {issue.images?.map((img) => (
+                        <img key={img.id} src={img.url} alt={`Issue photo ${img.id}`} className="w-full h-36 object-cover rounded" />
+                      ))}
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -86,8 +117,22 @@ const SectorIssueDetails = () => {
                 <CardTitle>Update Status</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
-                <Button variant="outline"><Loader2 className="w-4 h-4 mr-2" /> Mark In Progress</Button>
-                <Button variant="hero"><CheckCircle2 className="w-4 h-4 mr-2" /> Mark Resolved</Button>
+                {/* submitted -> inprogress */}
+                <Button
+                  variant="outline"
+                  disabled={!issue || issue.status !== "submitted" || updating}
+                  onClick={() => transition("inprogress")}
+                >
+                  <Loader2 className="w-4 h-4 mr-2" /> Mark In Progress
+                </Button>
+                {/* inprogress -> solved */}
+                <Button
+                  variant="hero"
+                  disabled={!issue || issue.status !== "inprogress" || updating}
+                  onClick={() => transition("solved")}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" /> Mark Solved
+                </Button>
               </CardContent>
             </Card>
           </div>
