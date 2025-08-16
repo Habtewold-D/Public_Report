@@ -57,6 +57,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
+  // Global 401 handler: if token is invalid/expired, redirect to Sign In
+  useEffect(() => {
+    const id = axios.interceptors.response.use(
+      (resp) => resp,
+      (error) => {
+        if (error?.response?.status === 401) {
+          clearAuth();
+          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
+            window.location.href = "/auth/signin";
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => {
+      axios.interceptors.response.eject(id);
+    };
+  }, []);
+
   const persistRole = (r: Exclude<Role, null>) => {
     setRoleState(r);
     localStorage.setItem("civic_role", r);
