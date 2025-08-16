@@ -9,11 +9,16 @@ use App\Http\Controllers\IssueController;
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+// Public sector options (no auth) for report page dropdown
+Route::get('/sectors/options', [SectorController::class, 'options']);
 
 // Protected routes (require Bearer token)
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Sector listing (authenticated)
+    Route::get('/sectors/public', [SectorController::class, 'publicIndex']);
 
     // Sector management (admin only, enforced in controller)
     Route::get('/sectors', [SectorController::class, 'index']);

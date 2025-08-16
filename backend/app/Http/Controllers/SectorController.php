@@ -29,6 +29,26 @@ class SectorController extends Controller
         return response()->json(['data' => $sectors]);
     }
 
+    // GET /api/sectors/public (any authenticated user)
+    public function publicIndex(Request $request)
+    {
+        $sectors = User::query()
+            ->where('role', 'sector')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+        return response()->json(['data' => $sectors]);
+    }
+
+    // GET /api/sectors/options (no auth required)
+    public function options(Request $request)
+    {
+        $sectors = User::query()
+            ->where('role', 'sector')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        return response()->json(['data' => $sectors]);
+    }
+
     // POST /api/sectors { name: string }
     public function store(Request $request)
     {

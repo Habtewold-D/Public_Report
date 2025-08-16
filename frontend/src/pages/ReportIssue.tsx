@@ -1,35 +1,38 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import MapComponent from "@/components/MapComponent";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Upload, Camera, Locate } from "lucide-react";
+import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 
 const ReportIssue = () => {
-  const [selectedLocation, setSelectedLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [formData, setFormData] = useState({
-    sector: "",
-    title: "",
+    sectorId: "",
     description: "",
-    images: [] as File[]
+    images: [] as File[],
   });
+  const [sectors, setSectors] = useState<Array<{ id: number; name: string }>>([]);
+  const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const sectors = [
-    "Street Lighting",
-    "Roads & Infrastructure", 
-    "Waste Management",
-    "Water & Sanitation",
-    "Public Transportation",
-    "Parks & Recreation",
-    "Public Safety",
-    "Building & Construction"
-  ];
+  useEffect(() => {
+    const loadSectors = async () => {
+      try {
+        const res = await axios.get("/sectors/options");
+        setSectors(res.data.data || []);
+      } catch (e) {
+        // Fall back: keep empty; user cannot submit without a sector
+        toast({ title: "Could not load sectors", description: "Please try again later.", variant: "destructive" });
+      }
+    };
+    loadSectors();
+  }, [toast]);
 
   const handleLocationSelect = (lat: number, lng: number) => {
     setSelectedLocation({ lat, lng });
@@ -61,24 +64,40 @@ const ReportIssue = () => {
       return;
     }
 
-    if (!formData.sector || !formData.title || !formData.description) {
+    if (!formData.sectorId || !formData.description) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields.",
+        description: "Please select a sector and enter a description.",
         variant: "destructive",
       });
       return;
     }
 
-    // Here you would typically submit to your backend
-    toast({
-      title: "Issue Reported Successfully!",
-      description: "Your report has been submitted and will be reviewed by the relevant sector team.",
-    });
+    const payload = new FormData();
+    payload.append("sector_id", formData.sectorId);
+    payload.append("description", formData.description.trim());
+    payload.append("latitude", String(selectedLocation.lat));
+    payload.append("longitude", String(selectedLocation.lng));
+    for (const file of formData.images) {
+      payload.append("images[]", file);
+    }
 
-    // Reset form
-    setFormData({ sector: "", title: "", description: "", images: [] });
-    setSelectedLocation(null);
+    setSubmitting(true);
+    axios
+      .post("/issues", payload, { headers: { "Content-Type": "multipart/form-data" } })
+      .then(() => {
+        toast({
+          title: "Issue Reported Successfully!",
+          description: "Your report has been submitted and will be reviewed by the relevant sector team.",
+        });
+        setFormData({ sectorId: "", description: "", images: [] });
+        setSelectedLocation(null);
+      })
+      .catch((err) => {
+        const msg = err?.response?.data?.message || "Submission failed";
+        toast({ title: "Submission Error", description: msg, variant: "destructive" });
+      })
+      .finally(() => setSubmitting(false));
   };
 
   const getCurrentLocation = () => {
@@ -165,30 +184,21 @@ const ReportIssue = () => {
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="sector">Sector *</Label>
-                  <Select value={formData.sector} onValueChange={(value) => 
-                    setFormData(prev => ({ ...prev, sector: value }))
-                  }>
+                  <Select
+                    value={formData.sectorId}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, sectorId: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select the relevant sector" />
                     </SelectTrigger>
                     <SelectContent>
                       {sectors.map((sector) => (
-                        <SelectItem key={sector} value={sector}>
-                          {sector}
+                        <SelectItem key={sector.id} value={String(sector.id)}>
+                          {sector.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="title">Issue Title *</Label>
-                  <Input
-                    id="title"
-                    placeholder="Brief summary of the issue"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  />
                 </div>
 
                 <div className="space-y-2">
@@ -261,9 +271,10 @@ const ReportIssue = () => {
                 variant="hero" 
                 size="lg"
                 className="px-12"
+                disabled={submitting}
               >
                 <Upload className="w-5 h-5 mr-2" />
-                Submit Report
+                {submitting ? "Submitting..." : "Submit Report"}
               </Button>
               <p className="text-sm text-muted-foreground mt-4">
                 You'll be asked to create an account or sign in after submitting.
