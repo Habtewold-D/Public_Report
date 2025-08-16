@@ -168,7 +168,7 @@ const ReportIssue = () => {
                   center={selectedLocation ? [selectedLocation.lat, selectedLocation.lng] : undefined}
                   selectedLocation={selectedLocation ?? undefined}
                   onLocationSelect={handleLocationSelect}
-                  className="w-full h-80 rounded-lg border"
+                  className="w-full h-80 rounded-lg border z-0"
                 />
               </CardContent>
             </Card>
@@ -188,10 +188,10 @@ const ReportIssue = () => {
                     value={formData.sectorId}
                     onValueChange={(value) => setFormData((prev) => ({ ...prev, sectorId: value }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="z-10">
                       <SelectValue placeholder="Select the relevant sector" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-50" position="popper" side="bottom" align="start">
                       {sectors.map((sector) => (
                         <SelectItem key={sector.id} value={String(sector.id)}>
                           {sector.name}
