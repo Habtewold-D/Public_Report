@@ -147,6 +147,7 @@ const ReportIssue = () => {
                 </div>
                 <MapComponent
                   center={selectedLocation ? [selectedLocation.lat, selectedLocation.lng] : undefined}
+                  selectedLocation={selectedLocation ?? undefined}
                   onLocationSelect={handleLocationSelect}
                   className="w-full h-80 rounded-lg border"
                 />

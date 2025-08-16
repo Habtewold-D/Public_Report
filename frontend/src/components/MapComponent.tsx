@@ -14,6 +14,8 @@ interface MapComponentProps {
   center?: [number, number];
   zoom?: number;
   onLocationSelect?: (lat: number, lng: number) => void;
+  // Optional currently selected location to display as a marker
+  selectedLocation?: { lat: number; lng: number } | null;
   markers?: Array<{
     id: string;
     lat: number;
@@ -28,11 +30,13 @@ const MapComponent = ({
   center = [9.0192, 38.7525], // Addis Ababa coordinates
   zoom = 12,
   onLocationSelect,
+  selectedLocation = null,
   markers = [],
   className = "w-full h-64"
 }: MapComponentProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const selectionMarkerRef = useRef<L.Marker | null>(null);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -50,6 +54,12 @@ const MapComponent = ({
     if (onLocationSelect) {
       mapInstanceRef.current.on('click', (e) => {
         const { lat, lng } = e.latlng;
+        // Update or create selection marker
+        if (selectionMarkerRef.current) {
+          selectionMarkerRef.current.setLatLng([lat, lng]);
+        } else if (mapInstanceRef.current) {
+          selectionMarkerRef.current = L.marker([lat, lng]).addTo(mapInstanceRef.current);
+        }
         onLocationSelect(lat, lng);
       });
     }
@@ -72,6 +82,12 @@ const MapComponent = ({
       }
     });
 
+    // If a selected location is provided initially, show its marker
+    if (selectedLocation && mapInstanceRef.current) {
+      selectionMarkerRef.current = L.marker([selectedLocation.lat, selectedLocation.lng]).addTo(mapInstanceRef.current);
+      mapInstanceRef.current.setView([selectedLocation.lat, selectedLocation.lng], zoom);
+    }
+
     // Cleanup function
     return () => {
       if (mapInstanceRef.current) {
@@ -79,7 +95,25 @@ const MapComponent = ({
         mapInstanceRef.current = null;
       }
     };
-  }, [center, zoom, onLocationSelect, markers]);
+  }, [center, zoom, onLocationSelect, markers, selectedLocation]);
+
+  // Keep selection marker in sync with prop changes
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    if (selectedLocation) {
+      if (selectionMarkerRef.current) {
+        selectionMarkerRef.current.setLatLng([selectedLocation.lat, selectedLocation.lng]);
+      } else {
+        selectionMarkerRef.current = L.marker([selectedLocation.lat, selectedLocation.lng]).addTo(mapInstanceRef.current);
+      }
+    } else {
+      // Remove selection marker if cleared
+      if (selectionMarkerRef.current) {
+        selectionMarkerRef.current.remove();
+        selectionMarkerRef.current = null;
+      }
+    }
+  }, [selectedLocation]);
 
   return <div ref={mapRef} className={className} />;
 };
