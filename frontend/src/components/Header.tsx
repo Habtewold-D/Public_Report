@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, User, Menu, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -27,34 +27,34 @@ const Header = () => {
           <nav className="hidden md:flex items-center space-x-6">
             {!role && (
               <>
-                <Link to="/" className="text-foreground hover:text-primary transition-colors">Home</Link>
-                <Link to="/issues" className="text-foreground hover:text-primary transition-colors">Browse Issues</Link>
-                <Link to="/report" className="text-foreground hover:text-primary transition-colors">Report Issue</Link>
+                <NavLink to="/" end className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Home</NavLink>
+                <NavLink to="/issues" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Browse Issues</NavLink>
+                <NavLink to="/report" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Report Issue</NavLink>
               </>
             )}
             {role === "citizen" && (
               <>
-                <Link to="/user/dashboard" className="text-foreground hover:text-primary transition-colors">Dashboard</Link>
-                <Link to="/report" className="text-foreground hover:text-primary transition-colors">Report Issue</Link>
-                <Link to="/user/my-issues" className="text-foreground hover:text-primary transition-colors">My Issues</Link>
-                <Link to="/user/notifications" className="text-foreground hover:text-primary transition-colors">Notifications</Link>
-                <Link to="/user/account" className="text-foreground hover:text-primary transition-colors">Account</Link>
+                <NavLink to="/user/dashboard" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Dashboard</NavLink>
+                <NavLink to="/report" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Report Issue</NavLink>
+                <NavLink to="/user/my-issues" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>My Issues</NavLink>
+                <NavLink to="/user/notifications" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Notifications</NavLink>
+                <NavLink to="/user/account" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Account</NavLink>
               </>
             )}
             {role === "sector" && (
               <>
-                <Link to="/sector/dashboard" className="text-foreground hover:text-primary transition-colors">Dashboard</Link>
-                <Link to="/sector/reports" className="text-foreground hover:text-primary transition-colors">Reports</Link>
-                <Link to="/sector/notifications" className="text-foreground hover:text-primary transition-colors">Notifications</Link>
+                <NavLink to="/sector/dashboard" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Dashboard</NavLink>
+                <NavLink to="/sector/reports" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Reports</NavLink>
+                <NavLink to="/sector/notifications" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Notifications</NavLink>
               </>
             )}
             {role === "admin" && (
               <>
-                <Link to="/admin/dashboard" className="text-foreground hover:text-primary transition-colors">Dashboard</Link>
-                <Link to="/admin/users" className="text-foreground hover:text-primary transition-colors">Users</Link>
-                <Link to="/admin/sectors" className="text-foreground hover:text-primary transition-colors">Sectors</Link>
-                <Link to="/admin/settings" className="text-foreground hover:text-primary transition-colors">Settings</Link>
-                <Link to="/admin/data" className="text-foreground hover:text-primary transition-colors">Data</Link>
+                <NavLink to="/admin/dashboard" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Dashboard</NavLink>
+                <NavLink to="/admin/users" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Users</NavLink>
+                <NavLink to="/admin/sectors" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Sectors</NavLink>
+                <NavLink to="/admin/settings" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Settings</NavLink>
+                <NavLink to="/admin/data" className={({isActive}) => `transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Data</NavLink>
               </>
             )}
           </nav>
@@ -105,34 +105,34 @@ const Header = () => {
             <nav className="flex flex-col space-y-3">
               {!role && (
                 <>
-                  <Link to="/" className="text-foreground hover:text-primary transition-colors py-2">Home</Link>
-                  <Link to="/issues" className="text-foreground hover:text-primary transition-colors py-2">Browse Issues</Link>
-                  <Link to="/report" className="text-foreground hover:text-primary transition-colors py-2">Report Issue</Link>
+                  <NavLink to="/" end className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Home</NavLink>
+                  <NavLink to="/issues" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Browse Issues</NavLink>
+                  <NavLink to="/report" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Report Issue</NavLink>
                 </>
               )}
               {role === "citizen" && (
                 <>
-                  <Link to="/user/dashboard" className="text-foreground hover:text-primary transition-colors py-2">Dashboard</Link>
-                  <Link to="/report" className="text-foreground hover:text-primary transition-colors py-2">Report Issue</Link>
-                  <Link to="/user/my-issues" className="text-foreground hover:text-primary transition-colors py-2">My Issues</Link>
-                  <Link to="/user/notifications" className="text-foreground hover:text-primary transition-colors py-2">Notifications</Link>
-                  <Link to="/user/account" className="text-foreground hover:text-primary transition-colors py-2">Account</Link>
+                  <NavLink to="/user/dashboard" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Dashboard</NavLink>
+                  <NavLink to="/report" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Report Issue</NavLink>
+                  <NavLink to="/user/my-issues" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>My Issues</NavLink>
+                  <NavLink to="/user/notifications" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Notifications</NavLink>
+                  <NavLink to="/user/account" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Account</NavLink>
                 </>
               )}
               {role === "sector" && (
                 <>
-                  <Link to="/sector/dashboard" className="text-foreground hover:text-primary transition-colors py-2">Dashboard</Link>
-                  <Link to="/sector/reports" className="text-foreground hover:text-primary transition-colors py-2">Reports</Link>
-                  <Link to="/sector/notifications" className="text-foreground hover:text-primary transition-colors py-2">Notifications</Link>
+                  <NavLink to="/sector/dashboard" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Dashboard</NavLink>
+                  <NavLink to="/sector/reports" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Reports</NavLink>
+                  <NavLink to="/sector/notifications" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Notifications</NavLink>
                 </>
               )}
               {role === "admin" && (
                 <>
-                  <Link to="/admin/dashboard" className="text-foreground hover:text-primary transition-colors py-2">Dashboard</Link>
-                  <Link to="/admin/users" className="text-foreground hover:text-primary transition-colors py-2">Users</Link>
-                  <Link to="/admin/sectors" className="text-foreground hover:text-primary transition-colors py-2">Sectors</Link>
-                  <Link to="/admin/settings" className="text-foreground hover:text-primary transition-colors py-2">Settings</Link>
-                  <Link to="/admin/data" className="text-foreground hover:text-primary transition-colors py-2">Data</Link>
+                  <NavLink to="/admin/dashboard" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Dashboard</NavLink>
+                  <NavLink to="/admin/users" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Users</NavLink>
+                  <NavLink to="/admin/sectors" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Sectors</NavLink>
+                  <NavLink to="/admin/settings" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Settings</NavLink>
+                  <NavLink to="/admin/data" className={({isActive}) => `py-2 transition-colors ${isActive ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'}`}>Data</NavLink>
                 </>
               )}
 
