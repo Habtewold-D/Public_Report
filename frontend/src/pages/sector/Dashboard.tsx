@@ -7,129 +7,95 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Clock, AlertTriangle, CheckCircle, Search, Filter, MessageSquare, Calendar, User } from "lucide-react";
+import { Clock, AlertTriangle, CheckCircle, Search, Filter, MessageSquare, Calendar, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import axios from "axios";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-interface SectorIssue {
-  id: string;
-  title: string;
-  citizenName: string;
-  status: 'open' | 'progress' | 'resolved';
-  priority: 'low' | 'medium' | 'high';
-  createdAt: string;
-  lastUpdate: string;
+interface IssueItem {
+  id: number;
   description: string;
-  location: string;
-  hasInternalNotes: boolean;
-  assignedTo?: string;
+  status: 'submitted' | 'inprogress' | 'solved' | string;
+  latitude?: number;
+  longitude?: number;
+  created_at?: string;
+  updated_at?: string;
+  reporter?: { id: number; name: string; email: string } | null;
 }
 
 const SectorDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
 
   // Authenticated sector user
   const { user } = useAuth();
   const displayName = user?.name || user?.first_name || "Sector";
-  const territories = ["Downtown", "East District", "West District"]; // static for now
 
-  // Mock sector issues - replace with actual data from your backend
-  const sectorIssues: SectorIssue[] = [
-    {
-      id: "1",
-      title: "Broken Street Light on Oak Avenue",
-      citizenName: "John D.",
-      status: "open",
-      priority: "high",
-      createdAt: "2024-01-20",
-      lastUpdate: "2024-01-20",
-      description: "Street light has been out for over a week, making the area unsafe at night.",
-      location: "Oak Avenue & 5th Street",
-      hasInternalNotes: false,
-      assignedTo: undefined
+  // Load issues assigned to this sector (backend enforces scope)
+  const { data: paged, isLoading, isError } = useQuery({
+    queryKey: ["sector-issues"],
+    queryFn: async () => {
+      const res = await axios.get("/issues");
+      return res.data.data as { data: IssueItem[] };
     },
-    {
-      id: "2",
-      title: "Multiple Street Lights Out",
-      citizenName: "Maria S.",
-      status: "progress",
-      priority: "high",
-      createdAt: "2024-01-18",
-      lastUpdate: "2024-01-22",
-      description: "Entire block has no street lighting for three days.",
-      location: "Pine Street Block 200-300",
-      hasInternalNotes: true,
-      assignedTo: "Mike Rodriguez"
-    },
-    {
-      id: "3",
-      title: "Flickering Street Light",
-      citizenName: "Robert K.",
-      status: "resolved",
-      priority: "medium",
-      createdAt: "2024-01-15",
-      lastUpdate: "2024-01-19",
-      description: "Street light flickers intermittently, needs maintenance.",
-      location: "Elm Street & 2nd Avenue",
-      hasInternalNotes: false,
-      assignedTo: "Sarah Johnson"
-    },
-    {
-      id: "4",
-      title: "Damaged Light Pole",
-      citizenName: "Lisa M.",
-      status: "open",
-      priority: "medium",
-      createdAt: "2024-01-19",
-      lastUpdate: "2024-01-19",
-      description: "Light pole leaning after recent storm, potential safety hazard.",
-      location: "Maple Drive & Park Avenue",
-      hasInternalNotes: false,
-      assignedTo: undefined
-    }
-  ];
+  });
+  const sectorIssues: IssueItem[] = paged?.data ?? [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'bg-status-open text-accent-foreground';
-      case 'progress': return 'bg-status-progress text-primary-foreground';
-      case 'resolved': return 'bg-status-resolved text-secondary-foreground';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-destructive text-destructive-foreground';
-      case 'medium': return 'bg-status-open text-accent-foreground';
-      case 'low': return 'bg-muted text-muted-foreground';
+      case 'submitted':
+      case 'open':
+        return 'bg-status-open text-accent-foreground';
+      case 'inprogress':
+      case 'progress':
+        return 'bg-status-progress text-primary-foreground';
+      case 'solved':
+      case 'resolved':
+        return 'bg-status-resolved text-secondary-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'open': return 'Open';
-      case 'progress': return 'In Progress';
-      case 'resolved': return 'Resolved';
+      case 'submitted':
+      case 'open':
+        return 'Open';
+      case 'inprogress':
+      case 'progress':
+        return 'In Progress';
+      case 'solved':
+      case 'resolved':
+        return 'Resolved';
       default: return status;
     }
   };
 
   const filteredIssues = sectorIssues.filter(issue => {
-    const matchesSearch = issue.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         issue.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || issue.priority === priorityFilter;
-    
-    return matchesSearch && matchesStatus && matchesPriority;
+    const title = issue.description || "";
+    const reporter = issue.reporter?.name || "";
+    const location = `${issue.latitude ?? ''},${issue.longitude ?? ''}`;
+    const matchesSearch = (title + reporter + location).toLowerCase().includes(searchTerm.toLowerCase());
+    const normalized = issue.status === 'submitted' ? 'open' : issue.status === 'inprogress' ? 'progress' : issue.status === 'solved' ? 'resolved' : issue.status;
+    const matchesStatus = statusFilter === 'all' || normalized === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  const openIssues = sectorIssues.filter(issue => issue.status === 'open').length;
-  const inProgressIssues = sectorIssues.filter(issue => issue.status === 'progress').length;
-  const resolvedIssues = sectorIssues.filter(issue => issue.status === 'resolved').length;
-  const highPriorityIssues = sectorIssues.filter(issue => issue.priority === 'high' && issue.status !== 'resolved').length;
+  const openIssues = sectorIssues.filter(issue => issue.status === 'submitted').length;
+  const inProgressIssues = sectorIssues.filter(issue => issue.status === 'inprogress').length;
+  const resolvedIssues = sectorIssues.filter(issue => issue.status === 'solved').length;
+  const highPriorityIssues = 0; // no priority in backend
+
+  const queryClient = useQueryClient();
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, next }: { id: number; next: 'inprogress' | 'solved' }) => {
+      const res = await axios.patch(`/issues/${id}/status`, { status: next });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sector-issues"] });
+    }
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -169,10 +135,10 @@ const SectorDashboard = () => {
               trendUp={true}
             />
             <StatsCard
-              title="Response Time"
-              value="2.4 hrs"
+              title="Total Issues"
+              value={(openIssues + inProgressIssues + resolvedIssues).toString()}
               icon={MessageSquare}
-              trend="Within target"
+              trend="Current assigned"
               trendUp={true}
             />
           </div>
@@ -186,7 +152,7 @@ const SectorDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Search</label>
                   <div className="relative">
@@ -214,71 +180,38 @@ const SectorDashboard = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Priority</label>
-                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Priorities</SelectItem>
-                      <SelectItem value="high">High Priority</SelectItem>
-                      <SelectItem value="medium">Medium Priority</SelectItem>
-                      <SelectItem value="low">Low Priority</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Territory</label>
-                  <Select defaultValue="all">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Territories</SelectItem>
-                      {territories.map((territory) => (
-                        <SelectItem key={territory} value={territory.toLowerCase()}>
-                          {territory}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Issues List */}
           <Tabs defaultValue="queue" className="space-y-6">
-            <TabsList className="grid grid-cols-3 w-full max-w-md">
+            <TabsList className="grid grid-cols-2 w-full max-w-md">
               <TabsTrigger value="queue">Work Queue</TabsTrigger>
               <TabsTrigger value="reports">Reports</TabsTrigger>
-              <TabsTrigger value="team">Team</TabsTrigger>
             </TabsList>
 
             <TabsContent value="queue" className="space-y-6">
               <div className="space-y-4">
-                {filteredIssues.map((issue) => (
+                {isLoading && (
+                  <Card><CardContent className="p-6">Loading issues...</CardContent></Card>
+                )}
+                {isError && (
+                  <Card><CardContent className="p-6 text-red-600">Failed to load issues.</CardContent></Card>
+                )}
+                {!isLoading && !isError && filteredIssues.map((issue) => (
                   <Card key={issue.id} className="hover:shadow-civic transition-shadow">
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <CardTitle className="text-lg flex items-center">
-                            {issue.title}
-                            {issue.hasInternalNotes && (
-                              <MessageSquare className="w-4 h-4 ml-2 text-primary" />
-                            )}
+                            {issue.description?.slice(0, 80) || `Issue #${issue.id}`}
                           </CardTitle>
                           <CardDescription className="text-muted-foreground">
-                            Reported by {issue.citizenName} • {issue.location}
+                            Reported by {issue.reporter?.name || 'Citizen'} • {(issue.latitude ?? 0).toFixed(4)}, {(issue.longitude ?? 0).toFixed(4)}
                           </CardDescription>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Badge className={`text-xs ${getPriorityColor(issue.priority)}`}>
-                            {issue.priority.toUpperCase()}
-                          </Badge>
                           <Badge className={`${getStatusColor(issue.status)}`}>
                             {getStatusLabel(issue.status)}
                           </Badge>
@@ -292,31 +225,29 @@ const SectorDashboard = () => {
                         <div className="flex items-center space-x-4">
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 mr-1" />
-                            <span>Created {new Date(issue.createdAt).toLocaleDateString()}</span>
+                            <span>Created {issue.created_at ? new Date(issue.created_at).toLocaleDateString() : '-'}</span>
                           </div>
-                          {issue.assignedTo && (
-                            <div className="flex items-center">
-                              <User className="w-4 h-4 mr-1" />
-                              <span>Assigned to {issue.assignedTo}</span>
-                            </div>
-                          )}
+                          <div className="flex items-center">
+                            <User className="w-4 h-4 mr-1" />
+                            <span>Sector Team</span>
+                          </div>
                         </div>
                         <div className="flex items-center">
                           <Clock className="w-4 h-4 mr-1" />
-                          <span>Updated {new Date(issue.lastUpdate).toLocaleDateString()}</span>
+                          <span>Updated {issue.updated_at ? new Date(issue.updated_at).toLocaleDateString() : '-'}</span>
                         </div>
                       </div>
 
                       <div className="flex justify-between items-center">
                         <div className="flex space-x-2">
-                          {issue.status === 'open' && (
-                            <Button variant="civic" size="sm">
-                              Start Working
+                          {(issue.status === 'submitted') && (
+                            <Button variant="civic" size="sm" onClick={() => updateStatus.mutate({ id: issue.id, next: 'inprogress' })} disabled={updateStatus.isPending}>
+                              {updateStatus.isPending ? 'Updating...' : 'Start Working'}
                             </Button>
                           )}
-                          {issue.status === 'progress' && (
-                            <Button variant="success" size="sm">
-                              Mark Resolved
+                          {(issue.status === 'inprogress') && (
+                            <Button variant="success" size="sm" onClick={() => updateStatus.mutate({ id: issue.id, next: 'solved' })} disabled={updateStatus.isPending}>
+                              {updateStatus.isPending ? 'Updating...' : 'Mark Resolved'}
                             </Button>
                           )}
                           <Button variant="outline" size="sm">
@@ -333,7 +264,7 @@ const SectorDashboard = () => {
                 ))}
               </div>
 
-              {filteredIssues.length === 0 && (
+              {!isLoading && !isError && filteredIssues.length === 0 && (
                 <Card className="text-center py-12">
                   <CardContent>
                     <CheckCircle className="w-12 h-12 text-secondary mx-auto mb-4" />
@@ -377,65 +308,7 @@ const SectorDashboard = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="team" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sector Team Management</CardTitle>
-                  <CardDescription>
-                    Manage your team members and assign issues
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 border border-border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-primary-muted rounded-full flex items-center justify-center">
-                          <User className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Sarah Johnson</p>
-                          <p className="text-sm text-muted-foreground">Team Lead • sarah.johnson@city.gov</p>
-                        </div>
-                      </div>
-                      <Badge className="bg-secondary text-secondary-foreground">Active</Badge>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 border border-border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-primary-muted rounded-full flex items-center justify-center">
-                          <User className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Mike Rodriguez</p>
-                          <p className="text-sm text-muted-foreground">Field Technician • mike.rodriguez@city.gov</p>
-                        </div>
-                      </div>
-                      <Badge className="bg-secondary text-secondary-foreground">Active</Badge>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 border border-border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                          <User className="w-5 h-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Jessica Chen</p>
-                          <p className="text-sm text-muted-foreground">Assistant • jessica.chen@city.gov</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline">On Leave</Badge>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-border">
-                    <Button variant="outline" className="w-full">
-                      <User className="w-4 h-4 mr-2" />
-                      Manage Team Members
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+            
           </Tabs>
         </div>
       </div>
