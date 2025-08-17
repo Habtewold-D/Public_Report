@@ -42,6 +42,51 @@ class IssueController extends Controller
         return response()->json(['data' => $issues]);
     }
 
+    public function publicIndex(Request $request)
+    {
+        $query = Issue::with(['sector:id,name,email', 'images'])
+            ->whereIn('status', ['submitted','inprogress','solved']);
+
+        // Search by description
+        if ($q = $request->string('q')->toString()) {
+            $query->where('description', 'like', "%{$q}%");
+        }
+
+        // Filter by sector name (public dropdown provides names)
+        if ($sectorName = $request->string('sector')->toString()) {
+            $query->whereHas('sector', function ($q) use ($sectorName) {
+                $q->where('name', $sectorName);
+            });
+        }
+
+        // Map UI status to internal status values
+        $statusMap = [
+            'open' => 'submitted',
+            'progress' => 'inprogress',
+            'resolved' => 'solved',
+            'submitted' => 'submitted',
+            'inprogress' => 'inprogress',
+            'solved' => 'solved',
+        ];
+        $statusParam = $request->string('status')->toString();
+        if ($statusParam && isset($statusMap[$statusParam])) {
+            $query->where('status', $statusMap[$statusParam]);
+        }
+
+        $issues = $query->latest()->paginate(20);
+
+        // Map image paths to URLs
+        $issues->getCollection()->transform(function ($issue) {
+            $issue->images->transform(function ($img) {
+                $img->url = Storage::url($img->path);
+                return $img;
+            });
+            return $issue;
+        });
+
+        return response()->json(['data' => $issues]);
+    }
+
     public function show(Issue $issue)
     {
         $user = Auth::user();

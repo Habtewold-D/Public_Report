@@ -11,6 +11,8 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 // Public sector options (no auth) for report page dropdown
 Route::get('/sectors/options', [SectorController::class, 'options']);
+// Public issues browse (no auth)
+Route::get('/issues/public', [IssueController::class, 'publicIndex']);
 
 // Protected routes (require Bearer token)
 Route::middleware('auth:sanctum')->group(function () {
