@@ -15,6 +15,7 @@ Route::get('/sectors/options', [SectorController::class, 'options']);
 // Protected routes (require Bearer token)
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
+    Route::put('/user', [AuthController::class, 'update']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // Sector listing (authenticated)

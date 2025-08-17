@@ -97,4 +97,51 @@ class AuthController extends Controller
         }
         return response()->json(['message' => 'Logged out']);
     }
+
+    public function update(Request $request)
+    {
+        /** @var User $user */
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $data = $request->validate([
+            'first_name' => ['sometimes', 'required', 'string', 'max:100'],
+            'last_name' => ['sometimes', 'required', 'string', 'max:100'],
+            'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'password' => ['nullable', Password::defaults()],
+        ]);
+
+        if (array_key_exists('first_name', $data)) {
+            $user->first_name = $data['first_name'];
+        }
+        if (array_key_exists('last_name', $data)) {
+            $user->last_name = $data['last_name'];
+        }
+        // Keep derived name in sync
+        if (array_key_exists('first_name', $data) || array_key_exists('last_name', $data)) {
+            $user->name = trim(($data['first_name'] ?? $user->first_name) . ' ' . ($data['last_name'] ?? $user->last_name));
+        }
+        if (array_key_exists('email', $data)) {
+            $user->email = $data['email'];
+        }
+        if (!empty($data['password'] ?? null)) {
+            $user->password = Hash::make($data['password']);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Updated',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
+        ]);
+    }
 }
