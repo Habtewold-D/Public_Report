@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import StatsCard from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,21 @@ import { Clock, AlertTriangle, CheckCircle, Search, Filter, MessageSquare, Calen
 import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip as ReTooltip,
+  Legend,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  BarChart,
+  Bar,
+} from "recharts";
 
 interface IssueItem {
   id: number;
@@ -40,6 +56,65 @@ const SectorDashboard = () => {
     },
   });
   const sectorIssues: IssueItem[] = paged?.data ?? [];
+
+  const normalize = (s: string) => (s === 'submitted' ? 'open' : s === 'inprogress' ? 'progress' : s === 'solved' ? 'resolved' : s);
+
+  // Reports data
+  const statusData = useMemo(() => {
+    const counts: Record<string, number> = { open: 0, progress: 0, resolved: 0 };
+    sectorIssues.forEach(i => {
+      const k = normalize(i.status);
+      if (k in counts) counts[k] += 1;
+    });
+    return [
+      { name: 'Open', value: counts.open },
+      { name: 'In Progress', value: counts.progress },
+      { name: 'Resolved', value: counts.resolved },
+    ];
+  }, [sectorIssues]);
+
+  const trendData = useMemo(() => {
+    const map = new Map<string, number>();
+    sectorIssues.forEach(i => {
+      const d = i.created_at ? new Date(i.created_at) : null;
+      if (!d) return;
+      const key = d.toISOString().slice(0, 10);
+      map.set(key, (map.get(key) ?? 0) + 1);
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, count]) => ({ date, count }));
+  }, [sectorIssues]);
+
+  const COLORS = ["#EF4444", "#F59E0B", "#10B981"]; // red, amber, green
+
+  const exportCSV = () => {
+    const rows = [
+      ["id", "description", "status", "created_at", "updated_at", "latitude", "longitude", "reporter_name"],
+      ...sectorIssues.map(i => [
+        i.id,
+        (i.description ?? '').replace(/\n|\r/g, ' ').slice(0, 1000),
+        normalize(i.status),
+        i.created_at ?? '',
+        i.updated_at ?? '',
+        i.latitude ?? '',
+        i.longitude ?? '',
+        i.reporter?.name ?? '',
+      ])
+    ];
+    const csv = rows.map(r => r.map((v) => {
+      const s = String(v);
+      if (s.includes(',') || s.includes('"')) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sector_issues_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -104,13 +179,18 @@ const SectorDashboard = () => {
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-7xl mx-auto">
           {/* Welcome Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-2">
-              {displayName}'s Dashboard
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Welcome, {displayName} • Manage your sector's issues and respond to citizens
-            </p>
+          <div className="mb-8 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-bold text-foreground mb-2">
+                {displayName}'s Dashboard
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Welcome, {displayName} • Manage your sector's issues and respond to citizens
+              </p>
+            </div>
+            <Link to="/sector/reports">
+              <Button variant="outline">Open Reports</Button>
+            </Link>
           </div>
 
           {/* Quick Stats */}
@@ -186,9 +266,8 @@ const SectorDashboard = () => {
 
           {/* Issues List */}
           <Tabs defaultValue="queue" className="space-y-6">
-            <TabsList className="grid grid-cols-2 w-full max-w-md">
+            <TabsList className="grid grid-cols-1 w-full max-w-md">
               <TabsTrigger value="queue">Work Queue</TabsTrigger>
-              <TabsTrigger value="reports">Reports</TabsTrigger>
             </TabsList>
 
             <TabsContent value="queue" className="space-y-6">
@@ -277,36 +356,7 @@ const SectorDashboard = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="reports" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sector Performance Reports</CardTitle>
-                  <CardDescription>
-                    Generate and download reports for your sector's performance metrics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Button variant="outline" className="h-auto p-4 flex flex-col items-start">
-                      <span className="font-medium">Weekly Summary</span>
-                      <span className="text-sm text-muted-foreground">Issues resolved, response times, citizen feedback</span>
-                    </Button>
-                    <Button variant="outline" className="h-auto p-4 flex flex-col items-start">
-                      <span className="font-medium">Monthly Analytics</span>
-                      <span className="text-sm text-muted-foreground">Trends, patterns, and improvement areas</span>
-                    </Button>
-                    <Button variant="outline" className="h-auto p-4 flex flex-col items-start">
-                      <span className="font-medium">Territory Breakdown</span>
-                      <span className="text-sm text-muted-foreground">Issue distribution by area and priority</span>
-                    </Button>
-                    <Button variant="outline" className="h-auto p-4 flex flex-col items-start">
-                      <span className="font-medium">Custom Report</span>
-                      <span className="text-sm text-muted-foreground">Create a report with specific date ranges and filters</span>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+            
 
             
           </Tabs>
