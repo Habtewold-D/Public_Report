@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import Index from "./pages/Index";
 import ReportIssue from "./pages/ReportIssue";
 import BrowseIssues from "./pages/BrowseIssues";
@@ -29,6 +29,13 @@ import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// Simple role guard for admin-only routes
+const RequireAdmin = ({ children }: { children: JSX.Element }) => {
+  const { role } = useAuth();
+  if (role !== "admin") return <NotFound />;
+  return children;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -59,11 +66,11 @@ const App = () => (
           <Route path="/sector/issues/:id" element={<SectorIssueDetails />} />
           <Route path="/sector/reports" element={<SectorReports />} />
           <Route path="/sector/notifications" element={<SectorNotifications />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/sectors" element={<AdminSectors />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
-          <Route path="/admin/data" element={<AdminData />} />
+          <Route path="/admin/dashboard" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
+          <Route path="/admin/users" element={<RequireAdmin><AdminUsers /></RequireAdmin>} />
+          <Route path="/admin/sectors" element={<RequireAdmin><AdminSectors /></RequireAdmin>} />
+          <Route path="/admin/settings" element={<RequireAdmin><AdminSettings /></RequireAdmin>} />
+          <Route path="/admin/data" element={<RequireAdmin><AdminData /></RequireAdmin>} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

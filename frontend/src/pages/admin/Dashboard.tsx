@@ -1,24 +1,26 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Header from "@/components/Header";
 import StatsCard from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Shield, 
-  Users, 
-  MapPin, 
-  Settings, 
-  AlertTriangle, 
-  CheckCircle, 
-  TrendingUp, 
+import {
+  Shield,
+  Users,
+  MapPin,
+  Settings,
+  AlertTriangle,
+  CheckCircle,
+  TrendingUp,
   Database,
   Eye,
   UserPlus,
   Building,
   BarChart3
 } from "lucide-react";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 
 interface SystemMetric {
   id: string;
@@ -37,90 +39,127 @@ interface RecentActivity {
   type: 'user' | 'sector' | 'issue' | 'system';
 }
 
+interface IssueItem {
+  id: number;
+  description: string;
+  status: 'submitted' | 'inprogress' | 'solved' | string;
+  created_at?: string;
+}
+
+interface SimpleUser {
+  id: number;
+  name: string;
+  first_name?: string;
+  last_name?: string;
+  email: string;
+  role: 'citizen' | 'sector' | 'admin';
+  created_at?: string;
+}
+
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Mock admin data - replace with actual data from your backend
-  const admin = {
-    name: "Administrator",
-    email: "admin@civicreport.gov",
-    role: "Super Admin",
-    lastLogin: "2024-01-23T10:30:00Z"
-  };
-
-  // Mock system metrics - replace with actual data from your backend
-  const systemMetrics: SystemMetric[] = [
-    {
-      id: "1",
-      title: "Total Users",
-      value: "1,256",
-      change: "+12% this month",
-      trend: "up",
-      icon: Users
-    },
-    {
-      id: "2",
-      title: "Active Issues",
-      value: "847",
-      change: "-5% from last week",
-      trend: "down",
-      icon: MapPin
-    },
-    {
-      id: "3",
-      title: "Resolution Rate",
-      value: "68%",
-      change: "+3% improvement",
-      trend: "up",
-      icon: CheckCircle
-    },
-    {
-      id: "4",
-      title: "System Uptime",
-      value: "99.9%",
-      change: "All systems operational",
-      trend: "stable",
-      icon: Shield
+  // Queries
+  const usersQ = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: async () => {
+      const res = await axios.get("/users");
+      return res.data.data as SimpleUser[];
     }
-  ];
+  });
 
-  const recentActivity: RecentActivity[] = [
-    {
-      id: "1",
-      action: "New sector manager registered",
-      user: "Sarah Johnson (Street Lighting)",
-      timestamp: "2024-01-23T09:15:00Z",
-      type: "user"
-    },
-    {
-      id: "2",
-      action: "Sector updated",
-      user: "Water & Sanitation - Coverage area expanded",
-      timestamp: "2024-01-23T08:45:00Z",
-      type: "sector"
-    },
-    {
-      id: "3",
-      action: "High priority issue flagged",
-      user: "Multiple street lights out - Downtown area",
-      timestamp: "2024-01-23T08:30:00Z",
-      type: "issue"
-    },
-    {
-      id: "4",
-      action: "System maintenance completed",
-      user: "Database optimization - 15% performance improvement",
-      timestamp: "2024-01-23T07:00:00Z",
-      type: "system"
-    },
-    {
-      id: "5",
-      action: "New citizen user registered",
-      user: "John Doe - East District",
-      timestamp: "2024-01-23T06:30:00Z",
-      type: "user"
+  const sectorsQ = useQuery({
+    queryKey: ["admin-sectors"],
+    queryFn: async () => {
+      const res = await axios.get("/sectors");
+      return res.data.data as SimpleUser[]; // sectors are users with role='sector'
     }
-  ];
+  });
+
+  const issuesQ = useQuery({
+    queryKey: ["admin-issues"],
+    queryFn: async () => {
+      const res = await axios.get("/issues");
+      // paginator object: res.data.data
+      const paged = res.data.data as { data: IssueItem[] };
+      return paged.data;
+    }
+  });
+
+  // Metrics derived from queries
+  const { systemMetrics, recentActivity } = useMemo(() => {
+    const users = usersQ.data ?? [];
+    const issues = issuesQ.data ?? [];
+    const sectors = sectorsQ.data ?? [];
+
+    const totalUsers = users.length;
+    const totalIssues = issues.length;
+    const activeIssues = issues.filter(i => i.status === 'submitted' || i.status === 'inprogress').length;
+    const resolved = issues.filter(i => i.status === 'solved').length;
+    const resolutionRate = totalIssues > 0 ? Math.round((resolved / totalIssues) * 100) : 0;
+
+    const metrics: SystemMetric[] = [
+      {
+        id: 'users',
+        title: 'Total Users',
+        value: totalUsers.toLocaleString(),
+        change: '',
+        trend: 'stable',
+        icon: Users,
+      },
+      {
+        id: 'issues',
+        title: 'Active Issues',
+        value: activeIssues.toString(),
+        change: '',
+        trend: 'stable',
+        icon: MapPin,
+      },
+      {
+        id: 'resolution',
+        title: 'Resolution Rate',
+        value: `${resolutionRate}%`,
+        change: '',
+        trend: 'stable',
+        icon: CheckCircle,
+      },
+      {
+        id: 'sectors',
+        title: 'Total Sectors',
+        value: sectors.length.toString(),
+        change: '',
+        trend: 'stable',
+        icon: Building,
+      },
+    ];
+
+    // Recent activity from latest issues and newly created users
+    const issueActivities: RecentActivity[] = issues
+      .slice(0, 10)
+      .map((i) => ({
+        id: `issue-${i.id}`,
+        action: i.description?.slice(0, 80) || `Issue #${i.id}`,
+        user: `Status: ${i.status}`,
+        timestamp: i.created_at || new Date().toISOString(),
+        type: 'issue',
+      }));
+
+    const userActivities: RecentActivity[] = users
+      .slice(0, 10)
+      .map((u) => ({
+        id: `user-${u.id}`,
+        action: `New ${u.role} registered`,
+        user: `${u.name} • ${u.email}`,
+        timestamp: u.created_at || new Date().toISOString(),
+        type: 'user',
+      }));
+
+    const combined = [...issueActivities, ...userActivities]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 10);
+
+    return { systemMetrics: metrics, recentActivity: combined };
+  }, [usersQ.data, issuesQ.data]);
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -154,13 +193,19 @@ const AdminDashboard = () => {
               System Administration
             </h1>
             <p className="text-lg text-muted-foreground">
-              Welcome, {admin.name} • Oversee platform operations and manage system settings
+              Overview • Oversee platform operations and manage system settings
             </p>
           </div>
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {systemMetrics.map((metric) => (
+            {(usersQ.isLoading || issuesQ.isLoading) && (
+              <Card><CardContent className="p-6">Loading metrics...</CardContent></Card>
+            )}
+            {(usersQ.isError || issuesQ.isError) && (
+              <Card><CardContent className="p-6 text-red-600">Failed to load metrics.</CardContent></Card>
+            )}
+            {!usersQ.isLoading && !issuesQ.isLoading && !usersQ.isError && !issuesQ.isError && systemMetrics.map((metric) => (
               <StatsCard
                 key={metric.id}
                 title={metric.title}
@@ -172,35 +217,7 @@ const AdminDashboard = () => {
             ))}
           </div>
 
-          {/* Quick Actions */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Common administrative tasks and system management
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                  <UserPlus className="w-6 h-6 text-primary" />
-                  <span className="font-medium">Add User</span>
-                </Button>
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                  <Building className="w-6 h-6 text-secondary" />
-                  <span className="font-medium">Manage Sectors</span>
-                </Button>
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                  <BarChart3 className="w-6 h-6 text-accent" />
-                  <span className="font-medium">View Reports</span>
-                </Button>
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                  <Settings className="w-6 h-6 text-muted-foreground" />
-                  <span className="font-medium">System Settings</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Quick Actions removed by request */}
 
           {/* Detailed Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -213,7 +230,7 @@ const AdminDashboard = () => {
             </TabsList>
 
             <TabsContent value="overview" className="mt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
                 {/* Recent Activity */}
                 <Card>
                   <CardHeader>
@@ -226,7 +243,13 @@ const AdminDashboard = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {recentActivity.map((activity) => {
+                    {(usersQ.isLoading || issuesQ.isLoading) && (
+                      <div className="p-3 text-sm text-muted-foreground">Loading activity...</div>
+                    )}
+                    {(usersQ.isError || issuesQ.isError) && (
+                      <div className="p-3 text-sm text-red-600">Failed to load activity.</div>
+                    )}
+                    {!usersQ.isLoading && !issuesQ.isLoading && !usersQ.isError && !issuesQ.isError && recentActivity.map((activity) => {
                       const Icon = getActivityIcon(activity.type);
                       return (
                         <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg border border-border">
@@ -246,58 +269,7 @@ const AdminDashboard = () => {
                   </CardContent>
                 </Card>
 
-                {/* System Status */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Shield className="w-5 h-5 mr-2 text-primary" />
-                      System Status
-                    </CardTitle>
-                    <CardDescription>
-                      Current platform health and performance metrics
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-secondary-muted rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-secondary rounded-full"></div>
-                        <span className="font-medium">Database</span>
-                      </div>
-                      <Badge className="bg-secondary text-secondary-foreground">Healthy</Badge>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 bg-secondary-muted rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-secondary rounded-full"></div>
-                        <span className="font-medium">API Services</span>
-                      </div>
-                      <Badge className="bg-secondary text-secondary-foreground">Operational</Badge>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 bg-secondary-muted rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-secondary rounded-full"></div>
-                        <span className="font-medium">File Storage</span>
-                      </div>
-                      <Badge className="bg-secondary text-secondary-foreground">Online</Badge>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 bg-status-open/10 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-status-open rounded-full"></div>
-                        <span className="font-medium">Email Service</span>
-                      </div>
-                      <Badge className="bg-status-open text-accent-foreground">Maintenance</Badge>
-                    </div>
-
-                    <div className="pt-4 border-t border-border">
-                      <Button variant="outline" className="w-full">
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Detailed Metrics
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* System Status removed by request */}
               </div>
             </TabsContent>
 
