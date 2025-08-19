@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Header from "@/components/Header";
 import MapComponent from "@/components/MapComponent";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { MapPin, Upload, Camera, Locate } from "lucide-react";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 const ReportIssue = () => {
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -20,6 +21,10 @@ const ReportIssue = () => {
   const [sectors, setSectors] = useState<Array<{ id: number; name: string }>>([]);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
+  const { quota, refreshUser } = useAuth();
+
+  const remainingThisWeek = useMemo(() => quota?.remaining ?? null, [quota]);
+  const weeklyLimit = useMemo(() => quota?.weekly_limit ?? null, [quota]);
 
   useEffect(() => {
     const loadSectors = async () => {
@@ -32,7 +37,9 @@ const ReportIssue = () => {
       }
     };
     loadSectors();
-  }, [toast]);
+    // also refresh quota on page open to be up-to-date
+    void refreshUser();
+  }, [toast, refreshUser]);
 
   const handleLocationSelect = (lat: number, lng: number) => {
     setSelectedLocation({ lat, lng });
@@ -54,7 +61,16 @@ const ReportIssue = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    // Client-side guard for quota
+    if (remainingThisWeek !== null && remainingThisWeek <= 0) {
+      toast({
+        title: "Submission Limit Reached",
+        description: "You've reached your weekly submission limit. Please try again next week.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!selectedLocation) {
       toast({
         title: "Location Required",
@@ -92,10 +108,17 @@ const ReportIssue = () => {
         });
         setFormData({ sectorId: "", description: "", images: [] });
         setSelectedLocation(null);
+        // refresh quota to reflect the new submission
+        void refreshUser();
       })
       .catch((err) => {
+        const status = err?.response?.status;
         const msg = err?.response?.data?.message || "Submission failed";
-        toast({ title: "Submission Error", description: msg, variant: "destructive" });
+        toast({ title: status === 429 ? "Submission Limit Reached" : "Submission Error", description: msg, variant: "destructive" });
+        if (status === 429) {
+          // sync quota from server
+          void refreshUser();
+        }
       })
       .finally(() => setSubmitting(false));
   };
@@ -136,6 +159,19 @@ const ReportIssue = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Quota Banner */}
+            {weeklyLimit !== null && (
+              <Card>
+                <CardContent className="py-4">
+                  <p className="text-sm">
+                    Weekly submission limit: <span className="font-medium">{weeklyLimit}</span>. Remaining this week: {" "}
+                    <span className={`font-medium ${remainingThisWeek !== null && remainingThisWeek <= 0 ? "text-destructive" : ""}`}>
+                      {remainingThisWeek}
+                    </span>
+                  </p>
+                </CardContent>
+              </Card>
+            )}
             {/* Location Selection */}
             <Card>
               <CardHeader>
@@ -271,7 +307,7 @@ const ReportIssue = () => {
                 variant="hero" 
                 size="lg"
                 className="px-12"
-                disabled={submitting}
+                disabled={submitting || (remainingThisWeek !== null && remainingThisWeek <= 0)}
               >
                 <Upload className="w-5 h-5 mr-2" />
                 {submitting ? "Submitting..." : "Submit Report"}

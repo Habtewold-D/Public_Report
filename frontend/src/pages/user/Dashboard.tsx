@@ -31,7 +31,7 @@ interface PaginatedIssues {
 
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
-  const { user: authUser } = useAuth();
+  const { user: authUser, quota, refreshUser } = useAuth();
   const [page, setPage] = useState(1);
 
   const userFirstName = useMemo(() => authUser?.first_name || authUser?.name?.split(" ")[0] || "User", [authUser]);
@@ -47,6 +47,8 @@ const UserDashboard = () => {
   });
 
   useEffect(() => { refetch(); }, [page, refetch]);
+  // Refresh user/quota on mount
+  useEffect(() => { void refreshUser(); }, [refreshUser]);
 
   const issues: IssueItem[] = data?.data || [];
 
@@ -100,6 +102,29 @@ const UserDashboard = () => {
               trendUp={true}
             />
           </div>
+
+          {/* Weekly Submission Quota (citizen only) */}
+          {quota && (
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Weekly Submissions</CardTitle>
+                <CardDescription>Your submission quota resets every 7 days.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="text-sm text-muted-foreground">
+                    Remaining this week:
+                    {" "}
+                    <span className={`font-medium ${quota.remaining <= 0 ? 'text-destructive' : 'text-foreground'}`}>
+                      {quota.remaining}
+                    </span>
+                    /{quota.weekly_limit}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Used: {quota.used} of {quota.weekly_limit}</div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Quick Actions */}
           <Card className="mb-8">

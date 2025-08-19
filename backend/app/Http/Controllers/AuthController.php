@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Issue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use Carbon\Carbon;
 
 class AuthController extends Controller
 {
@@ -77,7 +79,7 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         $user = $request->user();
-        return response()->json([
+        $payload = [
             'user' => $user ? [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -86,7 +88,25 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
             ] : null,
-        ]);
+        ];
+
+        // Include quota info for citizens
+        if ($user) {
+            $weeklyLimit = (int) env('SUBMISSION_WEEKLY_LIMIT', 5);
+            if ($weeklyLimit > 0) {
+                $since = Carbon::now()->subDays(7);
+                $used = Issue::where('user_id', $user->id)
+                    ->where('created_at', '>=', $since)
+                    ->count();
+                $payload['quota'] = [
+                    'weekly_limit' => $weeklyLimit,
+                    'used' => $used,
+                    'remaining' => max(0, $weeklyLimit - $used),
+                ];
+            }
+        }
+
+        return response()->json($payload);
     }
 
     public function logout(Request $request)

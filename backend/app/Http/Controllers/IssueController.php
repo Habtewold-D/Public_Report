@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class IssueController extends Controller
 {
@@ -107,6 +108,23 @@ class IssueController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
+
+        // Enforce weekly submission limit per user
+        $weeklyLimit = (int) env('SUBMISSION_WEEKLY_LIMIT', 5);
+        if ($weeklyLimit > 0) {
+            $since = Carbon::now()->subDays(7);
+            $submittedThisWeek = Issue::where('user_id', $user->id)
+                ->where('created_at', '>=', $since)
+                ->count();
+            if ($submittedThisWeek >= $weeklyLimit) {
+                return response()->json([
+                    'message' => 'Weekly submission limit reached. Please try again next week.',
+                    'limit' => $weeklyLimit,
+                    'used' => $submittedThisWeek,
+                    'remaining' => 0,
+                ], 429);
+            }
+        }
 
         $validated = $request->validate([
             'description' => ['required', 'string'],

@@ -13,10 +13,16 @@ interface AuthContextValue {
     email: string;
     role: Exclude<Role, null>;
   } | null;
+  quota: {
+    weekly_limit: number;
+    used: number;
+    remaining: number;
+  } | null;
   isAuthLoading: boolean;
   login: (payload: { email: string; password: string }) => Promise<{ role: Exclude<Role, null> }>;
   register: (payload: { firstName: string; lastName: string; email: string; password: string }) => Promise<{ role: Exclude<Role, null> }>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -24,11 +30,31 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [role, setRoleState] = useState<Role>(null);
   const [user, setUser] = useState<AuthContextValue["user"]>(null);
+  const [quota, setQuota] = useState<AuthContextValue["quota"]>(null);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(false);
 
   // Axios defaults for token-based API auth
   const API_BASE = "http://127.0.0.1:8000/api";
   axios.defaults.baseURL = API_BASE;
+
+  const hydrateUser = async () => {
+    try {
+      const res = await axios.get("/user");
+      if (res.data && res.data.user) {
+        const u = res.data.user as NonNullable<AuthContextValue["user"]>;
+        setUser(u);
+        setRoleState(u.role);
+        localStorage.setItem("civic_role", u.role);
+      }
+      if (res.data && res.data.quota) {
+        setQuota(res.data.quota as NonNullable<AuthContextValue["quota"]>);
+      }
+    } catch (_) {
+      // token invalid; clear
+      localStorage.removeItem("civic_token");
+      delete axios.defaults.headers.common["Authorization"];
+    }
+  };
 
   useEffect(() => {
     const savedRole = localStorage.getItem("civic_role");
@@ -39,21 +65,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (savedToken) {
       axios.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
       // Hydrate current user using token
-      (async () => {
-        try {
-          const res = await axios.get("/user");
-          if (res.data && res.data.user) {
-            const u = res.data.user as NonNullable<AuthContextValue["user"]>;
-            setUser(u);
-            setRoleState(u.role);
-            localStorage.setItem("civic_role", u.role);
-          }
-        } catch (_) {
-          // token invalid; clear
-          localStorage.removeItem("civic_token");
-          delete axios.defaults.headers.common["Authorization"];
-        }
-      })();
+      void hydrateUser();
     }
   }, []);
 
@@ -84,6 +96,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const clearAuth = () => {
     setRoleState(null);
     setUser(null);
+    setQuota(null);
     localStorage.removeItem("civic_role");
     localStorage.removeItem("civic_token");
     delete axios.defaults.headers.common["Authorization"];
@@ -100,6 +113,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         persistRole(u.role);
         localStorage.setItem("civic_token", token);
         axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        // fetch quota
+        await hydrateUser();
         return { role: u.role };
       }
       throw new Error("Invalid login response");
@@ -124,6 +139,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         persistRole(u.role);
         localStorage.setItem("civic_token", token);
         axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        // fetch quota
+        await hydrateUser();
         return { role: u.role };
       }
       throw new Error("Invalid register response");
@@ -142,9 +159,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const refreshUser = async () => {
+    await hydrateUser();
+  };
+
   const value = useMemo(
-    () => ({ role, user, isAuthLoading, login, register, logout }),
-    [role, user, isAuthLoading]
+    () => ({ role, user, quota, isAuthLoading, login, register, logout, refreshUser }),
+    [role, user, quota, isAuthLoading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
