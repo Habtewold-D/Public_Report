@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { MapPin, User, Menu, LogOut } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Link, NavLink } from "react-router-dom";
@@ -59,7 +60,7 @@ const Header = () => {
             )}
           </nav>
 
-          {/* CTA Buttons */}
+          {/* CTA Buttons + Notifications */}
           <div className="hidden md:flex items-center space-x-3">
             {!role ? (
               <>
@@ -75,6 +76,7 @@ const Header = () => {
               </>
             ) : (
               <>
+                <NotificationBell />
                 <Button
                   variant="outline"
                   size="sm"

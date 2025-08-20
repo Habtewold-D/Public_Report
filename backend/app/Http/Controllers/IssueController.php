@@ -11,6 +11,7 @@ use App\Events\IssueStatusUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
@@ -176,7 +177,15 @@ class IssueController extends Controller
             'type' => 'new_issue',
             'issue_id' => $issue->id,
         ]);
-        event(new NewIssueReported($notification));
+        try {
+            event(new NewIssueReported($notification));
+        } catch (\Throwable $e) {
+            Log::warning('Broadcast failed for NewIssueReported', [
+                'issue_id' => $issue->id,
+                'notification_id' => $notification->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         $issue->load('images');
         $issue->images->transform(function ($img) {
@@ -229,7 +238,15 @@ class IssueController extends Controller
             'type' => 'status_update',
             'issue_id' => $issue->id,
         ]);
-        event(new IssueStatusUpdated($notification));
+        try {
+            event(new IssueStatusUpdated($notification));
+        } catch (\Throwable $e) {
+            Log::warning('Broadcast failed for IssueStatusUpdated', [
+                'issue_id' => $issue->id,
+                'notification_id' => $notification->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json(['message' => 'Status updated', 'data' => $issue]);
     }

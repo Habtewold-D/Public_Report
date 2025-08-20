@@ -38,73 +38,99 @@ const MapComponent = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const selectionMarkerRef = useRef<L.Marker | null>(null);
 
+  // Initialize map ONCE
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Initialize map
-    mapInstanceRef.current = L.map(mapRef.current).setView(center, zoom);
+    const map = L.map(mapRef.current);
+    map.setView(center, zoom);
+    mapInstanceRef.current = map;
 
-    // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
-    }).addTo(mapInstanceRef.current);
+    }).addTo(map);
 
-    // Add click handler for location selection
-    if (onLocationSelect) {
-      mapInstanceRef.current.on('click', (e) => {
-        const { lat, lng } = e.latlng;
-        // Update or create selection marker
-        if (selectionMarkerRef.current) {
-          selectionMarkerRef.current.setLatLng([lat, lng]);
-        } else if (mapInstanceRef.current) {
-          selectionMarkerRef.current = L.marker([lat, lng]).addTo(mapInstanceRef.current);
-        }
-        onLocationSelect(lat, lng);
-      });
-    }
-
-    // Add markers
-    markers.forEach((marker) => {
+    // Ensure size is calculated correctly after the element is visible
+    setTimeout(() => {
       if (mapInstanceRef.current) {
-        const color = marker.status === 'resolved' ? '#059669' : 
-                     marker.status === 'progress' ? '#3b82f6' : '#f59e0b';
-        
-        const customIcon = L.divIcon({
-          html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>`,
-          iconSize: [20, 20],
-          className: 'custom-marker'
-        });
-
-        L.marker([marker.lat, marker.lng], { icon: customIcon })
-          .bindPopup(`<strong>${marker.title}</strong><br/>Status: ${marker.status}`)
-          .addTo(mapInstanceRef.current);
+        mapInstanceRef.current.invalidateSize();
       }
-    });
+    }, 0);
 
-    // If a selected location is provided initially, show its marker
-    if (selectedLocation && mapInstanceRef.current) {
-      selectionMarkerRef.current = L.marker([selectedLocation.lat, selectedLocation.lng]).addTo(mapInstanceRef.current);
-      mapInstanceRef.current.setView([selectedLocation.lat, selectedLocation.lng], zoom);
-    }
-
-    // Cleanup function
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
     };
-  }, [center, zoom, onLocationSelect, markers, selectedLocation]);
+  }, []);
 
-  // Keep selection marker in sync with prop changes
+  // Respond to center/zoom prop changes without re-creating the map
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const [lat, lng] = center;
+    // Avoid animation to reduce flicker
+    map.setView([lat, lng], zoom, { animate: false });
+  }, [center, zoom]);
+
+  // Click handler effect (depends on callback identity)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (!onLocationSelect) return;
+
+    const handler = (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      if (selectionMarkerRef.current) {
+        selectionMarkerRef.current.setLatLng([lat, lng]);
+      } else if (mapInstanceRef.current) {
+        selectionMarkerRef.current = L.marker([lat, lng]).addTo(mapInstanceRef.current);
+      }
+      onLocationSelect(lat, lng);
+    };
+
+    map.on('click', handler);
+    return () => {
+      map.off('click', handler);
+    };
+  }, [onLocationSelect]);
+
+  // Markers effect
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const created: L.Marker[] = [];
+    markers.forEach((marker) => {
+      const color = marker.status === 'resolved' ? '#059669' :
+                   marker.status === 'progress' ? '#3b82f6' : '#f59e0b';
+      const customIcon = L.divIcon({
+        html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>`,
+        iconSize: [20, 20],
+        className: 'custom-marker'
+      });
+      const m = L.marker([marker.lat, marker.lng], { icon: customIcon })
+        .bindPopup(`<strong>${marker.title}</strong><br/>Status: ${marker.status}`)
+        .addTo(map);
+      created.push(m);
+    });
+
+    return () => {
+      created.forEach((m) => m.remove());
+    };
+  }, [markers]);
+
+  // Keep selection marker in sync with prop changes (no auto recenters to avoid blinking)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
     if (selectedLocation) {
       if (selectionMarkerRef.current) {
         selectionMarkerRef.current.setLatLng([selectedLocation.lat, selectedLocation.lng]);
       } else {
-        selectionMarkerRef.current = L.marker([selectedLocation.lat, selectedLocation.lng]).addTo(mapInstanceRef.current);
+        selectionMarkerRef.current = L.marker([selectedLocation.lat, selectedLocation.lng]).addTo(map);
       }
     } else {
       // Remove selection marker if cleared
@@ -114,6 +140,8 @@ const MapComponent = ({
       }
     }
   }, [selectedLocation]);
+
+  // (Removed duplicate selectedLocation effect)
 
   return <div ref={mapRef} className={className} />;
 };

@@ -12,7 +12,8 @@ class BroadcastServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Broadcast::routes();
+        // Use token-based auth for broadcasting so SPA can authorize with Bearer token
+        Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
         require base_path('routes/channels.php');
     }

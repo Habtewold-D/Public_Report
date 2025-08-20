@@ -162,12 +162,34 @@ const SectorDashboard = () => {
   const highPriorityIssues = 0; // no priority in backend
 
   const queryClient = useQueryClient();
+  const [pendingId, setPendingId] = useState<number | null>(null);
   const updateStatus = useMutation({
     mutationFn: async ({ id, next }: { id: number; next: 'inprogress' | 'solved' }) => {
       const res = await axios.patch(`/issues/${id}/status`, { status: next });
-      return res.data;
+      return res.data as { id: number; status: string };
     },
-    onSuccess: () => {
+    onMutate: async ({ id, next }) => {
+      setPendingId(id);
+      await queryClient.cancelQueries({ queryKey: ["sector-issues"] });
+      const previous = queryClient.getQueryData(["sector-issues"]);
+      // Optimistically update
+      queryClient.setQueryData(["sector-issues"], (old: any) => {
+        if (!old || !old.data) return old;
+        return {
+          ...old,
+          data: old.data.map((it: any) => it.id === id ? { ...it, status: next } : it)
+        };
+      });
+      return { previous } as { previous: unknown };
+    },
+    onError: (_err, _vars, context) => {
+      // Rollback
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(["sector-issues"], context.previous as any);
+      }
+    },
+    onSettled: () => {
+      setPendingId(null);
       queryClient.invalidateQueries({ queryKey: ["sector-issues"] });
     }
   });
@@ -320,13 +342,23 @@ const SectorDashboard = () => {
                       <div className="flex justify-between items-center">
                         <div className="flex space-x-2">
                           {(issue.status === 'submitted') && (
-                            <Button variant="civic" size="sm" onClick={() => updateStatus.mutate({ id: issue.id, next: 'inprogress' })} disabled={updateStatus.isPending}>
-                              {updateStatus.isPending ? 'Updating...' : 'Start Working'}
+                            <Button
+                              variant="civic"
+                              size="sm"
+                              onClick={() => updateStatus.mutate({ id: issue.id, next: 'inprogress' })}
+                              disabled={pendingId === issue.id}
+                            >
+                              {pendingId === issue.id ? 'Updating...' : 'Start Working'}
                             </Button>
                           )}
                           {(issue.status === 'inprogress') && (
-                            <Button variant="success" size="sm" onClick={() => updateStatus.mutate({ id: issue.id, next: 'solved' })} disabled={updateStatus.isPending}>
-                              {updateStatus.isPending ? 'Updating...' : 'Mark Resolved'}
+                            <Button
+                              variant="success"
+                              size="sm"
+                              onClick={() => updateStatus.mutate({ id: issue.id, next: 'solved' })}
+                              disabled={pendingId === issue.id}
+                            >
+                              {pendingId === issue.id ? 'Updating...' : 'Mark Resolved'}
                             </Button>
                           )}
                           <Button variant="outline" size="sm">
