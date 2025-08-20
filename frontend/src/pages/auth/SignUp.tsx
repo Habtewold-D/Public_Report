@@ -175,13 +175,6 @@ const SignUp = () => {
                     <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>
                   </span>
                 </label>
-
-                <label className="flex items-start space-x-3 cursor-pointer">
-                  <input type="checkbox" className="mt-1 rounded border-border" />
-                  <span className="text-sm text-muted-foreground">
-                    I want to receive updates about community issues and platform improvements
-                  </span>
-                </label>
               </div>
 
               <Button type="submit" variant="hero" className="w-full" size="lg" disabled={isSubmitting || isAuthLoading}>
