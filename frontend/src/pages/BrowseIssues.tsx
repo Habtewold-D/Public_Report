@@ -237,9 +237,7 @@ const BrowseIssues = () => {
                             {getStatusLabel(issue.status)}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                          {issue.description}
-                        </p>
+                        {/* Removed duplicate body snippet to avoid repetition with title */}
                         <div className="flex justify-between items-center text-xs text-muted-foreground">
                           <span>{issue.sector?.name || 'Unassigned'}</span>
                           <div className="flex items-center space-x-2">
@@ -270,9 +268,7 @@ const BrowseIssues = () => {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-muted-foreground mb-4 line-clamp-3">
-                        {issue.description}
-                      </p>
+                      {/* Removed duplicate body snippet to avoid repetition with title */}
                       
                       <div className="flex justify-between items-center text-sm text-muted-foreground mb-4">
                         <div className="flex items-center">
