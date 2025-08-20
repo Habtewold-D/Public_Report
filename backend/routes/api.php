@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\UserAdminController;
 use App\Http\Controllers\IssueController;
+use App\Http\Controllers\NotificationController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -38,4 +39,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/issues/{issue}', [IssueController::class, 'show']);
     Route::post('/issues', [IssueController::class, 'store']);
     Route::patch('/issues/{issue}/status', [IssueController::class, 'updateStatus']);
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 });

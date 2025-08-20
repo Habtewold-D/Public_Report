@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Issue;
 use App\Models\IssueImage;
 use App\Models\User;
+use App\Models\Notification;
+use App\Events\NewIssueReported;
+use App\Events\IssueStatusUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -165,6 +168,16 @@ class IssueController extends Controller
             }
         }
 
+        // Persist and broadcast notification to sector user
+        $notification = Notification::create([
+            'user_id' => $issue->sector_id,
+            'title' => 'New Issue Reported',
+            'message' => 'A new issue was reported in your sector.',
+            'type' => 'new_issue',
+            'issue_id' => $issue->id,
+        ]);
+        event(new NewIssueReported($notification));
+
         $issue->load('images');
         $issue->images->transform(function ($img) {
             $img->url = Storage::url($img->path);
@@ -207,6 +220,16 @@ class IssueController extends Controller
 
         $issue->status = $next;
         $issue->save();
+
+        // Persist and broadcast notification to reporting user
+        $notification = Notification::create([
+            'user_id' => $issue->user_id,
+            'title' => 'Issue Status Updated',
+            'message' => "Your issue status was updated to {$next}.",
+            'type' => 'status_update',
+            'issue_id' => $issue->id,
+        ]);
+        event(new IssueStatusUpdated($notification));
 
         return response()->json(['message' => 'Status updated', 'data' => $issue]);
     }
