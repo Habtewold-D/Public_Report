@@ -7,13 +7,21 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
+     * Do not run this migration inside a transaction (helps Postgres surface real errors).
+     */
+    public $withinTransaction = false;
+
+    /**
      * Run the migrations.
      */
     public function up(): void
     {
         Schema::create('personal_access_tokens', function (Blueprint $table) {
             $table->id();
-            $table->morphs('tokenable');
+            // Define morph columns explicitly to control index name length on Postgres
+            $table->string('tokenable_type');
+            $table->unsignedBigInteger('tokenable_id');
+            $table->index(['tokenable_type', 'tokenable_id'], 'pat_tokenable_idx');
             $table->text('name');
             $table->string('token', 64)->unique();
             $table->text('abilities')->nullable();

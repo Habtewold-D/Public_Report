@@ -5,6 +5,11 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
+    /**
+     * Do not run this migration inside a transaction (helps Postgres surface real errors).
+     */
+    public $withinTransaction = false;
+
     public function up(): void
     {
         Schema::create('issue_images', function (Blueprint $table) {

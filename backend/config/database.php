@@ -99,6 +99,11 @@ return [
             // Note: libpq connection string options (e.g., endpoint for Neon SNI) must be
             // provided via the URL query string (DATABASE_URL). The 'options' key here is for
             // PDO driver options and must be an array; leaving it unset avoids type errors.
+            'options' => extension_loaded('pdo_pgsql') ? array_filter([
+                // Use emulated prepares to avoid "cached plan must not change result type"
+                // when schema changes occur during the same process (migrate + seed).
+                PDO::ATTR_EMULATE_PREPARES => true,
+            ]) : [],
         ],
 
         'sqlsrv' => [
